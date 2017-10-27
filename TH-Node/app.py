@@ -8,7 +8,6 @@
 import time
 import json
 import subprocess
-import RPi.GPIO as GPIO
 from HIH6130.io import HIH6130
 import paho.mqtt.client as mqtt
 from config import Identity
