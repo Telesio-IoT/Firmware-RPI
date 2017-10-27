@@ -29,7 +29,6 @@ $ sudo i2cdetect -y 1
 ```
 if properly connected it shows the sensor at address 0x27
 ```
-root@raspberrypi:~# i2cdetect -y 1
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:          -- -- -- -- -- -- -- -- -- -- -- -- --
 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -44,6 +43,8 @@ root@raspberrypi:~# i2cdetect -y 1
 * Install Python 3
 ```
 $ sudo apt-get install python3-dev
+$ sudo apt-get install python3-pip
+
 ```
 
 Install the HIH6130 Python library:
@@ -66,5 +67,11 @@ mv smbusmodule.c smbusmodule.c.orig # backup
 wget https://gist.githubusercontent.com/sebastianludwig/c648a9e06c0dc2264fbd/raw/2b74f9e72bbdffe298ce02214be8ea1c20aa290f/smbusmodule.c # download patched (Python 3) source
 python3 setup.py build
 python3 setup.py install
+
+```
+
+* Install MQTT library
+```
+$ sudo pip3 install paho-mqtt
 ```
 
