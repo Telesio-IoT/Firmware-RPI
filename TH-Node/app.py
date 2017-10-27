@@ -32,14 +32,14 @@ def _rexec(params):
   """
   # check that params is a list
   if not isinstance(params, list) or len(params) == 0:
-     return "Parameter must be a not empty list"    
+     return "Parameter must be a not empty list"
   command = params[0]
   try:
       subprocess.check_call(command,shell=True)
       out = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read()
       return json.dumps(out.decode())
-  except Exception, e:
-      print e
+  except Exception as e:
+      print (e)
       return "{\"msg\":\"Invalid command.\"}"
 
 def _get_identity():
@@ -49,7 +49,7 @@ def _get_identity():
         ret["platform"] = Identity.platform
         ret["os"] = subprocess.Popen("uname -a", shell=True, stdout=subprocess.PIPE).stdout.read().decode()
         return json.dumps(ret)
-    except Exception, e:
+    except Exception as e:
         return "{\"error\":\"" + e + "\"}"
 
 def _set_telemetry(params):
@@ -75,8 +75,8 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("v1/devices/me/attributes/response/+")
 
 # callback for PUBLISH messages received from the server
-def on_message(client, userdata, msg):    
-    print 'Topic: ' + msg.topic + '\nMessage: ' + str(msg.payload)
+def on_message(client, userdata, msg):
+    print ('Topic: ' + msg.topic + '\nMessage: ' + str(msg.payload))
     msg.payload = msg.payload.translate(None, '\\')
     # Decode JSON request
     data = json.loads(msg.payload)
@@ -84,15 +84,15 @@ def on_message(client, userdata, msg):
     # received an attribute update/response --  Message: {"shared":{"telemetry_period":30}}
     if 'shared' in data:
         # server attribute
-        print "received shared attributes"
+        print ("received shared attributes")
         if 'telemetry_period' in data['shared']:
-            print "received telemetry period", data['shared']['telemetry_period']
+            print ("received telemetry period", data['shared']['telemetry_period'])
             _set_telemetry(data['shared']['telemetry_period'])
         return
 
     # received a client attribute update -- Message: {"telemetry_period":15}
     if 'telemetry_period' in data:
-        print "received telemetry_period update", data['telemetry_period']
+        print ("received telemetry_period update", data['telemetry_period'])
         _set_telemetry(data['telemetry_period'])
         return
 
@@ -107,7 +107,7 @@ def on_message(client, userdata, msg):
     if data['method'] == 'getIdentity':
         # Reply with info object
         ret = _get_term_info()
-        print ret
+        print (ret)
         client.publish(msg.topic.replace('request', 'response'), ret, 1)
 
 client = mqtt.Client()
@@ -133,12 +133,12 @@ client.publish("v1/devices/me/attributes/request/1", '{"sharedKeys":"telemetry_p
 in_error = False
 ret = {}
 while True:
-    rht.read(); 
+    rht.read();
     ret["temp"] = rht.t
     ret["hum"] = rht.rh
     now = time.time()
     client.publish("v1/devices/me/telemetry", json.dumps(ret))
-    print int (now), json.dumps(ret)
+    print (int (now), json.dumps(ret))
 
     attributes = {}
     attributes["status"] = "OK"
