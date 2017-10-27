@@ -76,9 +76,9 @@ def on_connect(client, userdata, flags, rc):
 # callback for PUBLISH messages received from the server
 def on_message(client, userdata, msg):
     print ('Topic: ' + msg.topic + '\nMessage: ' + str(msg.payload))
-    msg.payload = msg.payload.translate(None, '\\')
+#    msg.payload = msg.payload.translate(None, '\\')
     # Decode JSON request
-    data = json.loads(msg.payload)
+    data = json.loads(msg.payload.decode())
 
     # received an attribute update/response --  Message: {"shared":{"telemetry_period":30}}
     if 'shared' in data:
