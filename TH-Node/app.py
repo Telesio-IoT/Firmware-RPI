@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
   RPI Temperature and Humidity sensors application
 
@@ -8,14 +8,22 @@
 import time
 import json
 import subprocess
+import RPi.GPIO as GPIO
+from HIH6130.io import HIH6130
 import paho.mqtt.client as mqtt
 from config import Identity
 
+# Device configuration
 device_type = Identity.device_type
 device_token = Identity.device_token
-
 # Device shared attribute
 telemetry_interval = 15     # default value
+
+# FQDN MQTT broker
+mqtt_server = "service.telesio.io"
+
+# HIH6130 temperature and humidity sensor
+rht = HIH6130()
 
 def _rexec(params):
   """Start a subprocess shell to execute the specified command and return its output.
@@ -109,7 +117,7 @@ client.on_message = on_message
 # use the device token as mqtt username with no password
 client.username_pw_set(device_token, password=None)
 # connect to telesio mqtt
-client.connect("service.telesio.io", 1883, 60)  # no SSL
+client.connect(mqtt_server, 1883, 60)  # no SSL
 # start the mqtt thread
 client.loop_start()
 
@@ -125,7 +133,9 @@ client.publish("v1/devices/me/attributes/request/1", '{"sharedKeys":"telemetry_p
 in_error = False
 ret = {}
 while True:
-    ret["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    rht.read(); 
+    ret["temp"] = rht.t
+    ret["hum"] = rht.rh
     now = time.time()
     client.publish("v1/devices/me/telemetry", json.dumps(ret))
     print int (now), json.dumps(ret)
