@@ -105,7 +105,7 @@ def on_message(client, userdata, msg):
     # RPC Message: {"method":"getIdentity","params":{}}
     if data['method'] == 'getIdentity':
         # Reply with info object
-        ret = _get_term_info()
+        ret = _get_identity()
         print (ret)
         client.publish(msg.topic.replace('request', 'response'), ret, 1)
 
