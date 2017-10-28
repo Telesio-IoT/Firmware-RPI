@@ -61,6 +61,9 @@ def _set_telemetry(params):
 def _get_readings():
     ret = {}
     ret["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    rht.read();
+    ret["temp"] = rht.t
+    ret["hum"] = rht.rh
     return json.dumps(ret)
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -106,6 +109,13 @@ def on_message(client, userdata, msg):
     if data['method'] == 'getIdentity':
         # Reply with info object
         ret = _get_identity()
+        print (ret)
+        client.publish(msg.topic.replace('request', 'response'), ret, 1)
+
+    # RPC Message: {"method":"getReadings","params":{}}
+    if data['method'] == 'getReadings':
+        # Reply with info object
+        ret = _get_readings()
         print (ret)
         client.publish(msg.topic.replace('request', 'response'), ret, 1)
 
