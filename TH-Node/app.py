@@ -83,7 +83,10 @@ def on_message(client, userdata, msg):
     # Decode JSON request
     data = json.loads(msg.payload.decode())
 
-    # received an attribute update/response --  Message: {"shared":{"telemetry_period":30}}
+    # 1. received a message as result of a shared attribute request 
+    # (since we subscribed to "v1/devices/me/attributes/response/+" at the time of connection)
+    # this is the response to a device request to read one or more shared attributes
+    # Received message example: {"shared":{"telemetry_period":30}}
     if 'shared' in data:
         # server attribute
         print ("received shared attributes")
@@ -92,52 +95,72 @@ def on_message(client, userdata, msg):
             _set_telemetry(data['shared']['telemetry_period'])
         return
 
-    # received a client attribute update -- Message: {"telemetry_period":15}
+    # 2. received a shared attribute update
+    # (since we subscribed to "v1/devices/me/attributes" at the time of connection)
+    # this is triggered by a shared attribute changing value (from an app or the device itself) 
+    # Received message example: {"telemetry_period":15}
     if 'telemetry_period' in data:
         print ("received telemetry_period update", data['telemetry_period'])
         _set_telemetry(data['telemetry_period'])
         return
 
-    # only RPC from this point below
+    # 3. only RPC requests from this point below
+    # (since we subscribed to "v1/devices/me/rpc/request/+" at the time of connection)
+    # scanning different methods that are implemented by the device
     if not 'method' in data:
         return
 
     # Check RPC request method
     #
-
-    # RPC Message: {"method":"getIdentity","params":{}}
+    # Received RPC request: {"method":"getIdentity","params":{}}
     if data['method'] == 'getIdentity':
         # Reply with info object
         ret = _get_identity()
         print (ret)
+        # return the response publishing to the proper topic
         client.publish(msg.topic.replace('request', 'response'), ret, 1)
 
-    # RPC Message: {"method":"getReadings","params":{}}
+    # Received RPC request: {"method":"getReadings","params":{}}
     if data['method'] == 'getReadings':
         # Reply with info object
         ret = _get_readings()
         print (ret)
+        # return the response publishing to the proper topic
         client.publish(msg.topic.replace('request', 'response'), ret, 1)
 
+# mqtt object
 client = mqtt.Client()
+# register callbacks
 client.on_connect = on_connect
 client.on_message = on_message
 
 # use the device token as mqtt username with no password
+#
+# the device token is the key for the server ito dentify the device
+# all subsequent uses of the client mqtt object are associated to this device
 client.username_pw_set(device_token, password=None)
 # connect to telesio mqtt
 client.connect(mqtt_server, 1883, 60)  # no SSL
-# start the mqtt thread
+# start the mqtt parallel thread
 client.loop_start()
 
-# send device attributes to the server
+# send device-side attributes to the server
+# device-side attributes can only be written or changed by the device
 attributes = {}
 attributes["type"] = device_type
 attributes["status"] = "OK"
+#
+# publising the device-side attributes: {"type":"RPI-TH", "status":"OK"}
+# the status may become "KO" in case for instance a sensor gives error or disconnected
+# the topic "v1/devices/me/attributes" is common to all devices
 client.publish("v1/devices/me/attributes", json.dumps(attributes))
 
-# request shared attributes
+# request shared attributes 
+# shared attributes can be written by the server or the device
+# typically contain configuration parameters that may change but not frequently
 client.publish("v1/devices/me/attributes/request/1", '{"sharedKeys":"telemetry_period"}')
+# the on_message callback is called asynchronously when the server returns the response
+# include "sharedKeys" for all the desired attributes of the device: {"sharedKeys":"key1, key2"}
 
 in_error = False
 ret = {}
@@ -146,11 +169,17 @@ while True:
     ret["temp"] = rht.t
     ret["hum"] = rht.rh
     now = time.time()
+    # send periodic data by publishing to the telemetry topic    
     client.publish("v1/devices/me/telemetry", json.dumps(ret))
     print (int (now), json.dumps(ret))
 
+    # updating the device attribute status
+    # this is really just to show that the status needs to be updated
     attributes = {}
-    attributes["status"] = "OK"
+    attributes["status"] = "OK"         # always ok in this device (but not elsewhere)
+    # publish to the attributes topic to propagate the new status to the server
     client.publish("v1/devices/me/attributes", json.dumps(attributes))
+    # both for telemetry and attributes updates an application may receive these
+    # updates with the HTTP and WebSockets API and not using mqqt subscribe
 
     time.sleep(telemetry_interval - (time.time() - now))
